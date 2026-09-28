@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodShare – Surplus Food Donation & Rescue Network</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Modern Sticky Header -->
+<header class="app-header">
+    <div class="header-inner">
+        <div class="brand" onclick="activateTab('listings')">
+            <div class="brand-icon-wrap">🍲</div>
+            <div class="brand-text">
+                <h1>FoodShare</h1>
+                <div class="brand-tagline">Surplus Food Redistribution Network</div>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <div class="live-badge" title="Real-time background sync active">
+                <span class="pulse-dot"></span>
+                <span>Live Network</span>
+            </div>
+            <button type="button" class="btn-header-cta" onclick="activateTab('list-food')">
+                <span>➕</span>
+                <span>Donate Food</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<div class="app-container">
+    <!-- Live Impact & Network Stats Ribbon -->
+    <section class="stats-ribbon" aria-label="Network Summary">
+        <div class="stat-card">
+            <div class="stat-icon green">🍲</div>
+            <div class="stat-content">
+                <div id="statAvailableKg" class="stat-value">0 kg</div>
+                <div class="stat-label">Available Surplus</div>
+                <div id="statAvailableSub" class="stat-sub">0 active listings</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon amber">🤝</div>
+            <div class="stat-content">
+                <div id="statNgos" class="stat-value">0</div>
+                <div class="stat-label">Partner NGOs</div>
+                <div class="stat-sub">Ready to distribute</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon blue">🏢</div>
+            <div class="stat-content">
+                <div id="statDonors" class="stat-value">0</div>
+                <div class="stat-label">Verified Donors</div>
+                <div class="stat-sub">Canteens & Caterers</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon purple">💚</div>
+            <div class="stat-content">
+                <div id="statRescuedKg" class="stat-value">0 kg</div>
+                <div class="stat-label">Total Diverted</div>
+                <div id="statRescuedMeals" class="stat-sub">0 meals saved</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Floating Navigation Bar -->
+    <nav class="nav-tab-container" aria-label="Main Navigation">
+        <div id="tabBar" class="tabs" role="tablist">
+            <button class="tab active" type="button" role="tab" data-tab="listings" aria-selected="true">
+                <span class="tab-icon">📋</span>
+                <span>Food Listings</span>
+                <span id="availableCount" class="badge">0</span>
+            </button>
+            <button class="tab" type="button" role="tab" data-tab="list-food" aria-selected="false">
+                <span class="tab-icon">✨</span>
+                <span>Donate Surplus</span>
+            </button>
+            <button class="tab" type="button" role="tab" data-tab="directory" aria-selected="false">
+                <span class="tab-icon">👥</span>
+                <span>Donors &amp; NGOs</span>
+            </button>
+            <button class="tab" type="button" role="tab" data-tab="report" aria-selected="false">
+                <span class="tab-icon">📊</span>
+                <span>Impact Analytics</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Semantic fallback for messages & alerts -->
+    <p id="msg" role="status" aria-live="polite"></p>
+
+    <!-- Main Content Panels -->
+    <main>
+        <!-- Panel 1: Listings Marketplace -->
+        <section id="panel-listings" class="tab-panel active-panel" role="tabpanel">
+            <!-- Listings Toolbar: Search, Filters, View Switcher -->
+            <div class="listings-toolbar">
+                <div class="toolbar-left">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input id="listingSearch" type="search" placeholder="Search food, donor, NGO..." oninput="filterListingsLocal()">
+                    </div>
+
+                    <div class="status-filter-pills" role="radiogroup" aria-label="Filter by status">
+                        <button type="button" class="filter-pill active" data-filter="ALL" onclick="setStatusFilter('ALL')">All</button>
+                        <button type="button" class="filter-pill" data-filter="AVAILABLE" onclick="setStatusFilter('AVAILABLE')">Available</button>
+                        <button type="button" class="filter-pill" data-filter="CLAIMED" onclick="setStatusFilter('CLAIMED')">Claimed</button>
+                        <button type="button" class="filter-pill" data-filter="COLLECTED" onclick="setStatusFilter('COLLECTED')">Collected</button>
+                    </div>
+                </div>
+
+                <div class="toolbar-right">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:12px; font-weight:600; color:var(--slate-500);">Claim as:</span>
+                        <select id="claimNgo" style="width: auto; min-width: 150px; font-weight: 600;"></select>
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:12px; font-weight:600; color:var(--slate-500);">Sort:</span>
+                        <select id="sortBy" style="width: auto; font-weight: 500;">
+                            <option value="safeUntil">⏰ Expiry Time</option>
+                            <option value="quantity">⚖️ Quantity</option>
+                            <option value="status">🏷️ Status</option>
+                            <option value="id">🔢 ID</option>
+                        </select>
+                    </div>
+
+                    <div class="view-toggle" title="Toggle Grid / Table View">
+                        <button id="btnViewCards" type="button" class="btn-view-toggle active" onclick="switchListingView('cards')" title="Card Grid View">🎴 Cards</button>
+                        <button id="btnViewTable" type="button" class="btn-view-toggle" onclick="switchListingView('table')" title="Data Table View">📑 Table</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Creative Food Cards Grid View -->
+            <div id="listingCardsContainer" class="listings-grid"></div>
+
+            <!-- Fallback / Table View Container -->
+            <div id="listingTableContainer" class="table-wrap hidden">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Donor</th>
+                        <th>Donor Phone</th>
+                        <th>Food</th>
+                        <th>Qty (kg)</th>
+                        <th>Safe Until</th>
+                        <th>Claimed By</th>
+                        <th>NGO Phone</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody id="listingBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Empty State when no listings match -->
+            <div id="emptyListingsState" class="empty-state hidden">
+                <div class="empty-state-icon">🍲</div>
+                <h3>No Listings Found</h3>
+                <p>There are no surplus food donations matching the selected filters right now.</p>
+                <button type="button" onclick="activateTab('list-food')">➕ List Surplus Food</button>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div class="pager">
+                <button type="button" onclick="prevPage()">◀ Previous</button>
+                <span id="pageInfo">Page 1</span>
+                <button type="button" onclick="nextPage()">Next ▶</button>
+            </div>
+        </section>
+
+        <!-- Panel 2: List Surplus Food (Creative 2-Column with Live Card Preview) -->
+        <section id="panel-list-food" class="tab-panel" role="tabpanel" hidden>
+            <div class="list-food-grid">
+                <!-- Donation Form Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="card-icon" style="background:#ecfdf5; color:#059669;">✨</div>
+                            <div>
+                                <h2>List Surplus Food</h2>
+                                <div class="card-subtitle">Connect prepared meals and surplus ingredients with local charities</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form onsubmit="event.preventDefault(); addListing();">
+                        <div class="form-group">
+                            <div class="form-label">
+                                <span>Donating Organization / Canteen</span>
+                                <a href="javascript:void(0)" onclick="activateTab('directory')" style="font-size:12px; color:var(--primary); font-weight:600; text-decoration:none;">+ New Donor</a>
+                            </div>
+                            <select id="listingDonor" onchange="updateLivePreview()" required></select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="foodType">
+                                <span>Food Item Description</span>
+                                <span class="form-hint">E.g., Vegetable Biryani, Sandwiches, Apples</span>
+                            </label>
+                            <input id="foodType" placeholder="What food is available?" oninput="updateLivePreview()" required>
+                            
+                            <!-- Quick Category Presets Chips -->
+                            <div class="preset-group">
+                                <span class="chip" onclick="applyFoodPreset('Cooked Meals / Rice 🍚')">🍚 Cooked Rice &amp; Meals</span>
+                                <span class="chip" onclick="applyFoodPreset('Bakery &amp; Bread 🥖')">🥖 Bakery &amp; Bread</span>
+                                <span class="chip" onclick="applyFoodPreset('Fresh Produce &amp; Fruits 🥗')">🥗 Fresh Produce</span>
+                                <span class="chip" onclick="applyFoodPreset('Packaged Goods 🥫')">🥫 Packaged Goods</span>
+                                <span class="chip" onclick="applyFoodPreset('Curry &amp; Gravy 🍲')">🍲 Curry &amp; Gravy</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="quantity">
+                                <span>Estimated Quantity (in kg)</span>
+                                <span class="form-hint">~2.5 meals per kilogram</span>
+                            </label>
+                            <div style="display: flex; gap: 8px;">
+                                <input id="quantity" type="number" min="0.1" step="0.1" placeholder="e.g. 15.0" oninput="updateLivePreview()" required>
+                                <button type="button" class="secondary small" onclick="adjustQuantity(1)">+1 kg</button>
+                                <button type="button" class="secondary small" onclick="adjustQuantity(5)">+5 kg</button>
+                                <button type="button" class="secondary small" onclick="adjustQuantity(10)">+10 kg</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="safeUntil">
+                                <span>Safe to Consume Until</span>
+                                <span class="form-hint">Required for health safety</span>
+                            </label>
+                            <input id="safeUntil" type="datetime-local" onchange="updateLivePreview()" required>
+
+                            <!-- Quick Expiry Presets -->
+                            <div class="preset-group">
+                                <span class="chip" onclick="applyExpiryHours(2)">⏱️ +2 Hours</span>
+                                <span class="chip" onclick="applyExpiryHours(4)">⏱️ +4 Hours</span>
+                                <span class="chip" onclick="applyExpiryTonight()">🌙 Tonight (11 PM)</span>
+                                <span class="chip" onclick="applyExpiryTomorrowNoon()">☀️ Tomorrow (12 PM)</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 24px;">
+                            <button type="submit" style="width: 100%; padding: 12px; font-size: 15px;">
+                                <span>🚀 Publish Food Listing</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Live Card Preview -->
+                <div class="preview-sticky">
+                    <div class="preview-wrapper">
+                        <div class="preview-badge-floating">Live Preview</div>
+                        <div style="font-size:12px; font-weight:700; color:var(--slate-500); text-transform:uppercase; margin-bottom:12px;">Marketplace Card Preview</div>
+
+                        <div class="food-card" style="margin-bottom:0; box-shadow:var(--shadow-elevated);">
+                            <div class="food-card-header">
+                                <div class="food-type-title">
+                                    <div id="previewFoodIcon" class="food-icon-circle">🍲</div>
+                                    <span id="previewFoodTitle">Prepared Food</span>
+                                </div>
+                                <span id="previewQtyBadge" class="qty-badge">0.0 kg</span>
+                            </div>
+
+                            <div class="food-card-details">
+                                <div class="detail-row">
+                                    <span>Donor:</span>
+                                    <strong id="previewDonorName">Select Donor</strong>
+                                </div>
+                                <div class="detail-row">
+                                    <span>Contact:</span>
+                                    <strong id="previewDonorPhone">-</strong>
+                                </div>
+                                <div class="detail-row">
+                                    <span>Safe Until:</span>
+                                    <span id="previewExpiryTag" class="expiry-tag fresh">⏰ Select Time</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span>Impact:</span>
+                                    <span id="previewImpactMeals" style="color:var(--primary); font-weight:700;">~0 meals saved</span>
+                                </div>
+                            </div>
+
+                            <div class="food-card-actions">
+                                <span class="tag AVAILABLE">● AVAILABLE</span>
+                                <button type="button" class="small secondary" disabled>Claim for NGO</button>
+                            </div>
+                        </div>
+                        <p style="font-size:11px; color:var(--slate-500); text-align:center; margin-top:12px;">This is how your donation will appear to partner NGOs in real-time.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Panel 3: Donors & NGOs Directory -->
+        <section id="panel-directory" class="tab-panel" role="tabpanel" hidden>
+            <div class="directory-grid">
+                <!-- Donors Column -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="card-icon" style="background:#ecfdf5; color:#059669;">🏢</div>
+                            <div>
+                                <h2>Food Donors</h2>
+                                <div class="card-subtitle">Restaurants, canteens, hostels, caterers</div>
+                            </div>
+                        </div>
+                        <span id="donorCountBadge" class="badge">0</span>
+                    </div>
+
+                    <!-- Add Donor Form -->
+                    <form onsubmit="event.preventDefault(); addDonor();" style="background:var(--slate-50); border:1px solid var(--slate-200); border-radius:var(--radius-lg); padding:16px; margin-bottom:16px;">
+                        <div style="font-size:13px; font-weight:700; color:var(--slate-800); margin-bottom:10px;">➕ Register New Donor</div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+                            <input id="donorName" placeholder="Donor name (e.g. Campus Canteen)" required>
+                            <input id="donorContact" placeholder="Phone or email contact" required>
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button type="submit" style="flex:1;">Add Donor</button>
+                            <button type="button" class="secondary" onclick="viewDonors()">Refresh List</button>
+                        </div>
+                    </form>
+
+                    <!-- Filter / Search Donors -->
+                    <div style="position:relative; margin-bottom:12px;">
+                        <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--slate-400); font-size:12px;">🔍</span>
+                        <input id="searchDonorInput" type="search" placeholder="Search donors..." oninput="filterDonorsLocal()" style="padding-left:32px; font-size:13px; border-radius:var(--radius-full);">
+                    </div>
+
+                    <!-- Donors List -->
+                    <div id="donorList" class="directory-list"></div>
+                </div>
+
+                <!-- NGOs Column -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="card-icon" style="background:#eff6ff; color:#2563eb;">🤝</div>
+                            <div>
+                                <h2>Partner NGOs</h2>
+                                <div class="card-subtitle">Food banks, shelters, redistribution partners</div>
+                            </div>
+                        </div>
+                        <span id="ngoCountBadge" class="badge">0</span>
+                    </div>
+
+                    <!-- Add NGO Form -->
+                    <form onsubmit="event.preventDefault(); addNgo();" style="background:var(--slate-50); border:1px solid var(--slate-200); border-radius:var(--radius-lg); padding:16px; margin-bottom:16px;">
+                        <div style="font-size:13px; font-weight:700; color:var(--slate-800); margin-bottom:10px;">➕ Register Partner NGO</div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+                            <input id="ngoName" placeholder="NGO name (e.g. Hope Shelter)" required>
+                            <input id="ngoContact" placeholder="Helpline or volunteer phone" required>
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button type="submit" style="flex:1;">Add NGO</button>
+                            <button type="button" class="secondary" onclick="viewNgos()">Refresh List</button>
+                        </div>
+                    </form>
+
+                    <!-- Filter / Search NGOs -->
+                    <div style="position:relative; margin-bottom:12px;">
+                        <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--slate-400); font-size:12px;">🔍</span>
+                        <input id="searchNgoInput" type="search" placeholder="Search NGOs..." oninput="filterNgosLocal()" style="padding-left:32px; font-size:13px; border-radius:var(--radius-full);">
+                    </div>
+
+                    <!-- NGOs List -->
+                    <div id="ngoList" class="directory-list"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Panel 4: Monthly Impact Report & Analytics -->
+        <section id="panel-report" class="tab-panel" role="tabpanel" hidden>
+            <div class="card" style="padding: 24px;">
+                <!-- Hero Impact Graphic Header -->
+                <div class="report-hero">
+                    <div class="report-controls-wrapper">
+                        <label for="month">Calendar Month:</label>
+                        <input id="month" type="month" onchange="loadReport()">
+                        <button type="button" onclick="loadReport()">Generate</button>
+                    </div>
+
+                    <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; opacity:0.85;">Total Surplus Food Diverted</div>
+                    <div id="report" class="report-hero-metric">0 kg</div>
+                    <div id="reportSummary" class="report-hero-subtitle">Select month to evaluate food redistribution impact.</div>
+
+                    <div class="impact-sub-grid">
+                        <div class="impact-sub-card">
+                            <div id="repMeals" class="impact-sub-val">0</div>
+                            <div class="impact-sub-lbl">🍽️ Meals Provided to People</div>
+                        </div>
+                        <div class="impact-sub-card">
+                            <div id="repCo2" class="impact-sub-val">0 kg</div>
+                            <div class="impact-sub-lbl">🌱 CO₂ Emissions Prevented</div>
+                        </div>
+                        <div class="impact-sub-card">
+                            <div id="repCollections" class="impact-sub-val">0</div>
+                            <div class="impact-sub-lbl">📦 Successful Rescues</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                    <h3 style="font-size:16px; font-weight:700; color:var(--slate-800); margin:0;">Verified Rescues In This Period</h3>
+                    <div style="font-size:12px; color:var(--slate-500);">Data verified via NGO collection signatures</div>
+                </div>
+
+                <div id="reportListings" class="table-wrap"></div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- ==========================================================================
+     Modern Modal Dialogs (Preserving all original IDs for seamless edit flow)
+     ========================================================================== -->
+
+<!-- 1. Edit Food Listing Modal -->
+<div id="modalListingEditor" class="modal-overlay hidden" onclick="if(event.target===this) cancelListingEdit()">
+    <div id="listingEditor" class="modal-box">
+        <div class="modal-header">
+            <h3>✏️ Edit Food Listing</h3>
+            <button type="button" class="modal-close-btn" onclick="cancelListingEdit()">✕</button>
+        </div>
+
+        <div class="edit-grid">
+            <div>
+                <label class="form-label" for="editListingId">Listing ID</label>
+                <input id="editListingId" readonly style="background:var(--slate-100);">
+            </div>
+            <div>
+                <label class="form-label" for="editListingDonor">Donor Organization</label>
+                <select id="editListingDonor"></select>
+            </div>
+            <div>
+                <label class="form-label" for="editDonorContact">Donor Phone</label>
+                <input id="editDonorContact" readonly style="background:var(--slate-100);">
+            </div>
+            <div>
+                <label class="form-label" for="editFoodType">Food Type / Name</label>
+                <input id="editFoodType" required>
+            </div>
+            <div>
+                <label class="form-label" for="editQuantity">Quantity (kg)</label>
+                <input id="editQuantity" type="number" min="0.1" step="0.1" required>
+            </div>
+            <div>
+                <label class="form-label" for="editSafeUntil">Safe Until (Expiry)</label>
+                <input id="editSafeUntil" type="datetime-local" required>
+            </div>
+            <div>
+                <label class="form-label" for="editNgoName">Claimed By (NGO)</label>
+                <input id="editNgoName" readonly style="background:var(--slate-100);">
+            </div>
+            <div>
+                <label class="form-label" for="editNgoContact">NGO Contact Phone</label>
+                <input id="editNgoContact" readonly style="background:var(--slate-100);">
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="secondary" onclick="cancelListingEdit()">Cancel</button>
+            <button type="button" onclick="saveListingEdit()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Edit Donor Modal -->
+<div id="modalDonorEditor" class="modal-overlay hidden" onclick="if(event.target===this) cancelDonorEdit()">
+    <div id="donorEditor" class="modal-box" style="max-width: 440px;">
+        <div class="modal-header">
+            <h3>✏️ Edit Food Donor</h3>
+            <button type="button" class="modal-close-btn" onclick="cancelDonorEdit()">✕</button>
+        </div>
+        <input id="editDonorId" type="hidden">
+        <div class="form-group">
+            <label class="form-label" for="editDonorName">Donor Organization Name</label>
+            <input id="editDonorName" placeholder="Donor name" required>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="editDonorContactValue">Contact Phone / Email</label>
+            <input id="editDonorContactValue" placeholder="Contact number" required>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="secondary" onclick="cancelDonorEdit()">Cancel</button>
+            <button type="button" onclick="saveDonorEdit()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- 3. Edit NGO Modal -->
+<div id="modalNgoEditor" class="modal-overlay hidden" onclick="if(event.target===this) cancelNgoEdit()">
+    <div id="ngoEditor" class="modal-box" style="max-width: 440px;">
+        <div class="modal-header">
+            <h3>✏️ Edit Partner NGO</h3>
+            <button type="button" class="modal-close-btn" onclick="cancelNgoEdit()">✕</button>
+        </div>
+        <input id="editNgoId" type="hidden">
+        <div class="form-group">
+            <label class="form-label" for="editNgoNameValue">NGO Organization Name</label>
+            <input id="editNgoNameValue" placeholder="NGO name" required>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="editNgoContactValue">Contact Phone / Hotline</label>
+            <input id="editNgoContactValue" placeholder="Contact number" required>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="secondary" onclick="cancelNgoEdit()">Cancel</button>
+            <button type="button" onclick="saveNgoEdit()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modern Toast Notification Container -->
+<div id="toastContainer" class="toast-container" aria-live="assertive"></div>
+
+<script src="javascript.js"></script>
+</body>
+</html>

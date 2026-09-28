@@ -1,0 +1,102 @@
+### 1. Create donor
+POST http://localhost:8080/api/donors
+Content-Type: application/json
+
+{ "name": "Campus Canteen", "contact": "9999999999" }
+
+### 1a. Update donor
+PUT http://localhost:8080/api/donors/1
+Content-Type: application/json
+
+{ "name": "Campus Canteen Main", "contact": "9999990000" }
+
+### 2. Create NGO 1
+POST http://localhost:8080/api/ngos
+Content-Type: application/json
+
+{ "name": "Hope Shelter", "contact": "8888888888" }
+
+### 2a. Update NGO
+PUT http://localhost:8080/api/ngos/1
+Content-Type: application/json
+
+{ "name": "Hope Shelter Central", "contact": "8888880000" }
+
+### 3. Create NGO 2 (for the "only one NGO" test)
+POST http://localhost:8080/api/ngos
+Content-Type: application/json
+
+{ "name": "Care Foundation", "contact": "7777777777" }
+
+### 4. Donor lists food -> 201
+POST http://localhost:8080/api/listings
+Content-Type: application/json
+
+{ "donorId": 1, "foodType": "Rice", "quantity": 10.5, "safeUntil": "2026-12-31T23:00:00" }
+
+### 5. Browse listings (pagination + sorting) -> 200
+GET http://localhost:8080/api/listings?page=0&size=5&sortBy=quantity
+
+### 6. NGO 1 claims listing 1 -> 201
+POST http://localhost:8080/api/listings/1/claim
+Content-Type: application/json
+
+{ "ngoId": 1 }
+
+### 7. EDGE: NGO 2 claims same listing -> 409 (already claimed)
+POST http://localhost:8080/api/listings/1/claim
+Content-Type: application/json
+
+{ "ngoId": 2 }
+
+### 8. Mark listing collected -> 200
+PUT http://localhost:8080/api/listings/1/collect
+
+### 9. EDGE: collect again -> 409
+PUT http://localhost:8080/api/listings/1/collect
+
+### 10. Monthly report -> 200 (change month if needed)
+GET http://localhost:8080/api/reports/monthly?year=2026&month=9
+
+### 11. EDGE: invalid input (blank type, negative qty, past date) -> 400
+POST http://localhost:8080/api/listings
+Content-Type: application/json
+
+{ "donorId": 1, "foodType": "", "quantity": -5, "safeUntil": "2020-01-01T10:00:00" }
+
+### 12. EDGE: unknown listing -> 404
+POST http://localhost:8080/api/listings/999/claim
+Content-Type: application/json
+
+{ "ngoId": 1 }
+
+### 13. EDGE: bad sort field -> 400
+GET http://localhost:8080/api/listings?sortBy=abc
+
+### 14. Auto-expire test: creates a listing that expires in 1 minute (safeUntil is auto-set)
+< {%
+    const d = new Date(Date.now() + 60 * 1000 - new Date().getTimezoneOffset() * 60000);
+    request.variables.set("soon", d.toISOString().slice(0, 19));
+%}
+POST http://localhost:8080/api/listings
+Content-Type: application/json
+
+{ "donorId": 1, "foodType": "Bread", "quantity": 3, "safeUntil": "{{soon}}" }
+
+### 15. Run this AFTER 1-2 minutes: status is EXPIRED and claiming gives 409
+GET http://localhost:8080/api/listings?sortBy=id
+
+### 16. EDGE: claim the expired listing (use its id, e.g. 2) -> 409
+POST http://localhost:8080/api/listings/2/claim
+Content-Type: application/json
+
+{ "ngoId": 1 }
+
+### CRUD: update listing
+PUT http://localhost:8080/api/listings/1
+Content-Type: application/json
+
+{ "donorId": 1, "foodType": "Updated Rice", "quantity": 12.5, "safeUntil": "2030-12-31T23:00:00" }
+
+### CRUD: delete listing and its related claims
+DELETE http://localhost:8080/api/listings/1

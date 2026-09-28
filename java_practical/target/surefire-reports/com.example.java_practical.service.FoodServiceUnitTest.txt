@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.example.java_practical.service.FoodServiceUnitTest
+-------------------------------------------------------------------------------
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.320 s -- in com.example.java_practical.service.FoodServiceUnitTest
